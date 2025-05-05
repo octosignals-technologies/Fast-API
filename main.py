@@ -4,6 +4,7 @@ import mysql.connector
 from mysql.connector import Error
 from pydantic import BaseModel
 from typing import List
+from datetime import datetime
 
 app = FastAPI()
 
@@ -17,35 +18,56 @@ db_config = {
 }
 
 class Message(BaseModel):
+    id: int
     number: str
     message: str
+    created_on: datetime
+
+class MarkReadRequest(BaseModel):
+    ids: List[int]
 
 @app.get("/data", response_model=List[Message])
 async def get_data():
     try:
-        # Connect to MySQL
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor(dictionary=True)
 
-        # Query records where status = 0
-        query = "SELECT number, message FROM Inbox WHERE is_read = 0"
+        query = "SELECT id, number, message, created_on FROM Inbox WHERE is_read = 0"
         cursor.execute(query)
         results = cursor.fetchall()
 
-        # Close database connection
         cursor.close()
         connection.close()
-
         return results
 
     except Error as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Database error: {str(e)}"
-        )
-
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Server error: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+@app.post("/mark-as-read")
+async def mark_as_read(request: MarkReadRequest):
+    if not request.ids:
+        raise HTTPException(status_code=400, detail="No message IDs provided.")
+
+    try:
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+
+        # Use parameterized query
+        format_strings = ','.join(['%s'] * len(request.ids))
+        query = f"UPDATE Inbox SET is_read = 1 WHERE id IN ({format_strings})"
+        cursor.execute(query, tuple(request.ids))
+        connection.commit()
+
+        affected_rows = cursor.rowcount
+
+        cursor.close()
+        connection.close()
+
+        return JSONResponse(content={"marked_as_read": affected_rows})
+
+    except Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
