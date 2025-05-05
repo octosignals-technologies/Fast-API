@@ -9,10 +9,11 @@ app = FastAPI()
 
 # MySQL configuration
 db_config = {
-    'host': 'mysql',  # Changed to 'mysql' for Docker compatibility
-    'user': 'your_username',
-    'password': 'your_password',
-    'database': 'your_database'
+    'host': '38.242.140.179',
+    'port': 3306,
+    'user': 'twilioclouddb',
+    'password': 'M!aPyC4ewi3!Ze5c',
+    'database': 'twilioclouddb'
 }
 
 class Message(BaseModel):
@@ -27,7 +28,7 @@ async def get_data():
         cursor = connection.cursor(dictionary=True)
 
         # Query records where status = 0
-        query = "SELECT number, message FROM messages WHERE status = 0"
+        query = "SELECT number, message FROM Inbox WHERE is_read = 1"
         cursor.execute(query)
         results = cursor.fetchall()
 
