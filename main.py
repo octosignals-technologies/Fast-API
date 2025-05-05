@@ -28,7 +28,7 @@ async def get_data():
         cursor = connection.cursor(dictionary=True)
 
         # Query records where status = 0
-        query = "SELECT number, message FROM Inbox WHERE is_read = 1"
+        query = "SELECT number, message FROM Inbox WHERE is_read = 0"
         cursor.execute(query)
         results = cursor.fetchall()
 
